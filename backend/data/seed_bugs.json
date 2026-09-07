@@ -1,0 +1,123 @@
+[
+  {
+    "id": "BUG-001",
+    "title": "NullPointerException in UserService after OAuth token refresh",
+    "stack_trace": "NullPointerException at UserService.java:142\n  user.getAccountId() returned null after token refresh",
+    "root_cause": "OAuth refresh handler rebuilds User object but omits accountId mapping",
+    "resolution": "Re-map all user fields in OAuthRefreshHandler.refreshUserContext(). Add null guard before getAccountId() call.",
+    "severity": "Critical",
+    "priority": "P1",
+    "component": "Auth/OAuth",
+    "status": "Resolved"
+  },
+  {
+    "id": "BUG-002",
+    "title": "Database connection pool exhausted under high load",
+    "stack_trace": "TimeoutException: Unable to acquire connection from pool\n  at HikariPool.getConnection(HikariPool.java:213)",
+    "root_cause": "Connection pool max-size too low for concurrent request volume",
+    "resolution": "Increased HikariCP pool size from 10 to 25 in application.properties.",
+    "severity": "High",
+    "priority": "P1",
+    "component": "Database Layer",
+    "status": "Resolved"
+  },
+  {
+    "id": "BUG-003",
+    "title": "JWT token expiry not handled \u00e2\u20ac\u201d returns 500 instead of 401",
+    "stack_trace": "SignatureVerificationException at JWTFilter.java:88\n  Token signature verification failed",
+    "root_cause": "JWTFilter throws uncaught exception on token expiry instead of returning 401",
+    "resolution": "Added try-catch in JWTFilter, return ResponseEntity with 401 status.",
+    "severity": "High",
+    "priority": "P2",
+    "component": "Auth/OAuth",
+    "status": "Resolved"
+  },
+  {
+    "id": "BUG-004",
+    "title": "API rate limiter blocking legitimate requests after cache flush",
+    "stack_trace": "RateLimitException: Request limit exceeded for IP 192.168.1.1\n  at RateLimiterService.checkLimit(RateLimiterService.java:56)",
+    "root_cause": "Redis cache flush resets rate limiter counters incorrectly",
+    "resolution": "Added fallback in-memory counter during Redis reconnection.",
+    "severity": "Medium",
+    "priority": "P2",
+    "component": "API Gateway",
+    "status": "Resolved"
+  },
+  {
+    "id": "BUG-005",
+    "title": "Scheduler job runs twice on application restart",
+    "stack_trace": "DuplicateKeyException: Duplicate entry for job execution log\n  at SchedulerService.executeJob(SchedulerService.java:112)",
+    "root_cause": "Quartz scheduler not properly deregistered before shutdown",
+    "resolution": "Added scheduler.shutdown(true) in pre-destroy hook. Added idempotency check.",
+    "severity": "Medium",
+    "priority": "P3",
+    "component": "Scheduler/Jobs",
+    "status": "Resolved"
+  },
+  {
+    "id": "BUG-006",
+    "title": "Memory leak in file upload handler \u00e2\u20ac\u201d heap grows unbounded",
+    "stack_trace": "OutOfMemoryError: Java heap space\n  at FileUploadHandler.processChunk(FileUploadHandler.java:78)",
+    "root_cause": "File chunks stored in memory without streaming to disk",
+    "resolution": "Switched to streaming multipart processing. Chunks written directly to temp file.",
+    "severity": "Critical",
+    "priority": "P1",
+    "component": "API Gateway",
+    "status": "Resolved"
+  },
+  {
+    "id": "BUG-007",
+    "title": "Pagination returns duplicate records on page boundary",
+    "stack_trace": "No exception \u00e2\u20ac\u201d silent data issue. Page 2 returns last 2 records of page 1.",
+    "root_cause": "OFFSET-based pagination with non-deterministic ORDER BY on equal timestamps",
+    "resolution": "Added secondary sort on ID. Switched to cursor-based pagination.",
+    "severity": "Medium",
+    "priority": "P2",
+    "component": "Database Layer",
+    "status": "Resolved"
+  },
+  {
+    "id": "BUG-008",
+    "title": "Email notification service sends duplicate emails on retry",
+    "stack_trace": "SMTPException: Connection reset\n  at EmailService.sendWithRetry(EmailService.java:94)",
+    "root_cause": "Retry logic does not check if email was already delivered before retrying",
+    "resolution": "Added idempotency key per email event. Check delivery status before retry.",
+    "severity": "High",
+    "priority": "P2",
+    "component": "Scheduler/Jobs",
+    "status": "Resolved"
+  },
+  {
+    "id": "BUG-009",
+    "title": "Frontend crashes on null user profile after logout-login cycle",
+    "stack_trace": "TypeError: Cannot read properties of null (reading 'displayName')\n  at UserProfile.render (UserProfile.jsx:34)",
+    "root_cause": "Redux store not cleared on logout \u00e2\u20ac\u201d stale user object persists",
+    "resolution": "Dispatch CLEAR_USER action on logout. Reset entire auth slice before new login.",
+    "severity": "High",
+    "priority": "P2",
+    "component": "Frontend/UI",
+    "status": "Resolved"
+  },
+  {
+    "id": "BUG-010",
+    "title": "Search index not updated after bulk record delete",
+    "stack_trace": "IndexOutOfSyncException: Document IDs in search index do not match database\n  at SearchIndexService.verify(SearchIndexService.java:201)",
+    "root_cause": "Bulk delete bypasses Hibernate event listeners \u00e2\u20ac\u201d search index sync hook never triggered",
+    "resolution": "Replaced bulk delete with batched individual deletes to trigger listeners.",
+    "severity": "Medium",
+    "priority": "P3",
+    "component": "Database Layer",
+    "status": "Resolved"
+  },
+  {
+    "id": "BUG-11",
+    "title": "Password reset link expires before user clicks it",
+    "stack_trace": "TokenExpiredException: Reset token has expired\n  at PasswordResetService.validateToken(PasswordResetService.java:78)\n  at AuthController.resetPassword(AuthController.java:134)\n  -- Token generated with 15 minute expiry but email delivery takes 20+ minutes",
+    "root_cause": "Password reset token TTL set to 15 minutes but email delivery through the SMTP relay averages 20-25 minutes during peak hours, causing tokens to expire before the user receives and clicks the link",
+    "resolution": "Increased token TTL from 15 minutes to 60 minutes in application.properties. Added token expiry time display in the email body so users know how long they have",
+    "severity": "High",
+    "priority": "P2",
+    "component": "Auth/OAuth",
+    "status": "Resolved"
+  }
+]
